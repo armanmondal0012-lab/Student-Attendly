@@ -1,0 +1,40 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isAdmin() {
+      return signedIn() && request.auth.uid == "7AOEs1d8hGQGYxU2GAyKCjdhkTG3";
+    }
+
+    // Existing Attendly shared app data: same permissions as current production rules.
+    match /attendly/shared {
+      allow read: if isAdmin();
+      allow create, update: if isAdmin()
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.data is map;
+      allow delete: if false;
+    }
+
+    // Each device can manage only its own FCM token records.
+    match /users/{userId}/fcmTokens/{tokenId} {
+      allow read: if signedIn() && request.auth.uid == userId;
+      allow create, update: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.token is string
+        && request.resource.data.token.size() > 20;
+      allow delete: if signedIn() && request.auth.uid == userId;
+    }
+
+    // Only the authenticated Attendly admin can queue or view notifications.
+    match /notifications/{notificationId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.title is string
+        && request.resource.data.body is string
+        && request.resource.data.sent == false;
+      // GitHub Actions uses Admin SDK, which bypasses Firestore client rules.
+      allow update, delete: if isAdmin();
+    }
+  }
+}

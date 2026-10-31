@@ -1,0 +1,13 @@
+{
+  "name": "attendly-github-push-worker",
+  "private": true,
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "send-pending": "node scripts/send-pending-notifications.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.10.0"
+  }
+}
